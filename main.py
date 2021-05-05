@@ -39,23 +39,26 @@ def load_data():
 def run_basic_classifier(arg_path, model_name, device):
     with open(arg_path, "r") as f:
         args = yaml.full_load(f)
-        print(args)
+        # print(args)
         data = load_data()
         train_size = int(len(data["train"]) * args["data_split"])
         train_data, eval_data = random_split(data["train"], [train_size, len(data["train"]) - train_size])
+        print(type(eval_data))
+
         train_loader = DataLoader(train_data, batch_size=args["batch_size"], num_workers=args["num_workers"],
                                   collate_fn=collate_fn)
         valid_loader = DataLoader(eval_data, batch_size=args["batch_size"], num_workers=args["num_workers"],
                                   collate_fn=collate_fn)
         test_loader = DataLoader(data["test"], batch_size=args["batch_size"], num_workers=args["num_workers"],
                                  collate_fn=collate_fn)
-
-        vocab, _ = get_vocab(data["train"])
-        vocab_size = len(vocab)
-        classifier = BasicTextClassifier(vocab_size, args["embedding_size"], args["num_classes"])
-
+        print("Data Loaded")
+        # vocab, _ = get_vocab(data["train"])
+        # vocab_size = len(vocab)
+        # classifier = BasicTextClassifier(vocab_size, args["embedding_size"], args["num_classes"])
+        classifier = BasicTextClassifier(1566089, args["embedding_size"], args["num_classes"])
+        print(classifier)
         optimizer = optim.SGD(classifier.parameters(), lr=args["lr"])
-        scheduler = StepLR(optimizer, gamma=args["lr_step_size"])
+        scheduler = StepLR(optimizer, args["batch_size"] // 3, gamma=args["lr_step_size"])
         loss_func = torch.nn.BCELoss()
         trainer = TextTrainer(classifier, optimizer, loss_func, device)
 
@@ -71,8 +74,7 @@ def run_basic_classifier(arg_path, model_name, device):
                     torch.save({"state_dict": classifier.state_dict(),
                                 "loss": loss, "epoch": epoch + 1},
                                Path.cwd() / "saved_models" / "basic_classifier" / f"{model_name}_{epoch}.pth")
-            elif epoch >= (args["num_epochs"] / 5):
-                scheduler.step()
+            scheduler.step()
         print(f"Total training time: {(time.time()- total_time):.2f}")
         print("Testing metrics")
         trainer.test(test_loader)
@@ -80,6 +82,7 @@ def run_basic_classifier(arg_path, model_name, device):
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
     amazon_path = "args/amazon_sentiment_args.yaml"
     # print(classifier)
     create_yaml_arg_file(amazon_path)

@@ -12,7 +12,8 @@ def get_vocab(dset):
     return Vocab(counter, min_freq=1), tokenizer
 
 
-def collate_fn(data, device):
+def collate_fn(data):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     labels, x_arr, offsets = [], [], []
     vocab, tokenizer = get_vocab(data)
     for (y, x) in data:

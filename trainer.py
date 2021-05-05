@@ -1,10 +1,10 @@
 import torch
-import numpy as np
-import matplotlib.pyplot as plt
+# import numpy as np
+# import matplotlib.pyplot as plt
 from torch.nn.modules.loss import _Loss
 from torch.nn import Module
 from torch.optim import Optimizer
-from tqdm import tqdm
+import tqdm
 import time
 
 
@@ -19,17 +19,19 @@ class TextTrainer:
     def train(self, dset):
         self.model.train()
         start = time.time()
-        loss, running_acc = 0, 0
         correct, total = 0, 0
         total_loss, best_acc = 0.0, 0.0
-        for idx, data in tqdm(enumerate(dset), loss=loss, running_acc=running_acc):
+        tq = tqdm.tqdm(dset)
+        # tq = dset
+        for idx, data in enumerate(tq):
             y = data[0]
             x = data[1]
             offset = data[2]
             y_pred = self.model(x, offset)
             loss = self.loss_func(y_pred, y)
             total_loss += loss
-            self.optimizer.zero_grad()     ##
+
+            self.optimizer.zero_grad()     #
             loss.backward()
             # Gradient clipping with normalization at 0.1
             torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.1)
@@ -38,6 +40,7 @@ class TextTrainer:
             correct += (y_pred == y).sum().item().cpu()
             total += y.size(0)
             running_acc = (correct / total * 1.0) * 100
+            tq.set_postfix(LOSS=loss, RUNNING_ACC=running_acc)
         self.accuracy_eval("train", correct, total,
                            total_loss / (idx+1), time.time() - start)
         return total_loss / (idx + 1)
@@ -47,8 +50,10 @@ class TextTrainer:
         correct, total = 0, 0
         total_loss = 0
         start = time.time()
+        idx = 0
         with torch.no_grad():
-            for idx, data in tqdm(enumerate(dset)):
+            for data in tqdm.tqdm(dset, mininterval=2):
+                idx += 1
                 y, x, offset = data
                 y_pred = self.model(y, offset)
                 loss = self.loss_func(y_pred, y)
