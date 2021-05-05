@@ -14,11 +14,14 @@ def get_vocab(dset):
 
 def collate_fn(data):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    labels, x_arr, offsets = [], [], []
+    labels, x_arr, offsets = [], [], [0]
+    text_pipeline = lambda x: [vocab[token] for token in tokenizer(x)]
+    label_pipeline = lambda x: int(x) - 1
+
     vocab, tokenizer = get_vocab(data)
     for (y, x) in data:
-        labels.append([(var - 1) for var in y])
-        x_processed = torch.tensor([vocab[token] for token in tokenizer(x)], dtype=torch.int64)
+        labels.append(label_pipeline(y))
+        x_processed = torch.tensor(text_pipeline(x), dtype=torch.int64)
         x_arr.append(x_processed)
         offsets.append(x_processed.size(0))
     labels = torch.tensor(labels, dtype=torch.int64)

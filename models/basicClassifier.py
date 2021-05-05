@@ -7,7 +7,8 @@ class BasicTextClassifier(nn.Module):
         # Gets mean(/sum/max) of embeddings for each text position
         self.embedding = nn.EmbeddingBag(num_embeddings=vocab_size, embedding_dim=embed_dim,
                                          sparse=True)
-        self.fc = nn.Linear(embed_dim, num_classes)
+        self.fc = nn.Linear(embed_dim, 1)
+        self.sigmoid = nn.Sigmoid()
         self.initialize_weights()
 
     def initialize_weights(self):
@@ -19,4 +20,4 @@ class BasicTextClassifier(nn.Module):
 
     def forward(self, text, offset):
         embed = self.embedding(text, offset)      # Get text embedding
-        return self.fc(embed)                     # Embedding passed to FC layer
+        return self.sigmoid(self.fc(embed))                     # Embedding passed to FC layer

@@ -16,4 +16,4 @@ def fashion_mst_data():
 def amazon_polarity_data():
     """Amazon Reviews Polarity Dataset: 2 classes 0-1"""
     train_data, test_data = torchtext.datasets.AmazonReviewPolarity(root="data", split=("train", "test"))
-    return {"train": train_data, "test": test_data}
+    return {"train": list(train_data), "test": list(test_data)}

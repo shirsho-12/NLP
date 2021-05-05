@@ -16,49 +16,55 @@ class TextTrainer:
         self.device = device
         self.model.to(device)
 
-    def train(self, dset):
+    def train(self, dataloader):
         self.model.train()
         start = time.time()
         correct, total = 0, 0
         total_loss, best_acc = 0.0, 0.0
-        tq = tqdm.tqdm(dset)
+        tq = tqdm.tqdm(dataloader)
         # tq = dset
         for idx, data in enumerate(tq):
             y = data[0]
             x = data[1]
             offset = data[2]
             y_pred = self.model(x, offset)
+
+            correct += (y_pred == y).sum().item()
+            total += y.size(0)
+
+            y = y.unsqueeze(1)           # For BCE Loss
+            y = y.float()
             loss = self.loss_func(y_pred, y)
             total_loss += loss
 
             self.optimizer.zero_grad()     #
             loss.backward()
             # Gradient clipping with normalization at 0.1
-            torch.nn.utils.clip_grad_norm(self.model.parameters(), 0.1)
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), 0.1)
             self.optimizer.step()
-
-            correct += (y_pred == y).sum().item().cpu()
-            total += y.size(0)
             running_acc = (correct / total * 1.0) * 100
-            tq.set_postfix(LOSS=loss, RUNNING_ACC=running_acc)
+            tq.set_postfix(LOSS=loss.item(), RUNNING_ACC=running_acc)
         self.accuracy_eval("train", correct, total,
                            total_loss / (idx+1), time.time() - start)
         return total_loss / (idx + 1)
 
-    def test(self, dset):
+    def test(self, dataloader):
         self.model.eval()
         correct, total = 0, 0
         total_loss = 0
         start = time.time()
         idx = 0
         with torch.no_grad():
-            for data in tqdm.tqdm(dset, mininterval=2):
+            for data in tqdm.tqdm(dataloader, mininterval=2):
                 idx += 1
                 y, x, offset = data
+                correct += (y_pred == y).sum().item()
+                total += y.size(0)
+                y = y.unsqueeze(1)  # For BCE Loss
+                y = y.float()
                 y_pred = self.model(y, offset)
                 loss = self.loss_func(y_pred, y)
-                correct += (y_pred == y).sum().item().cpu()
-                total += y.size(0)
+
                 total_loss += loss
         self.accuracy_eval("eval", correct, total,
                            total_loss / (idx + 1), time.time() - start)
